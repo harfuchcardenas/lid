@@ -34,4 +34,4 @@ rename $temp_file, $input_file
     or die "Could not rename '$temp_file' to '$input_file': $!";
 
 print "The replacement has been successfully completed in '$input_file'.\n";
-#To make the changes take effect run sudo systemctl restart systemd-logind
+#To make the changes take effect run sudo systemctl restart systemd-logind.service
