@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+my $file = "/etc/systemd/logind.conf"; #/etc/systemd/logind.conf
+open(FH, $file) or die "File $file not found";
+while(my $string = <FH>)
+{
+    if($string =~ /HandleLidSwitch=/)
+    {
+        print "$string \n";
+    }
+}
+close(FH);
+#system("HandleLidSwitch=ignore");
