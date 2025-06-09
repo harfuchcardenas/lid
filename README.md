@@ -2,8 +2,8 @@ This Repository is used to control the
 behavior of your laptop system when closing
 the lid of your laptop.
 There are two options:
-- wolid [work without the lid]: for this run `sudo lid`
-- wotlid [work without the lid]: for this run `sudo no-lid`
+- wolid [work without the lid]: for this run `sudo wolid`
+- wotlid [work without the lid]: for this run `sudo wotlid`
 Emphazis that whenever one would like to work
 without the lid (no-lid) the system will be 
 configured not to sleep whenever the lid is
@@ -15,7 +15,7 @@ NOTE: these commands needs appropriate rights
 to modify system configuration, therefore
 `sudo`rights are required to be able to run
 this command successfully.
-Additionally whenever the command `lid` is
+Additionally whenever the command `wolid` is
 run, the effects for going to sleep are defined in the file:
 /usr/lib/systemd/logind.conf.d/*.conf,
 so one needs to modify the InhibitDelayMaxSec 
