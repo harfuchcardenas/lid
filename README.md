@@ -21,6 +21,7 @@ run, the effects for going to sleep are defined in the file:
 so one needs to modify the InhibitDelayMaxSec 
 in order to make the changes apply after this 
 time
+
 NEXT STEPS: This file modifies the /etc/systemd/login.conf file and looks for:
 -HandleLidSwitch
 -HandleLidSwitchExternalPower
