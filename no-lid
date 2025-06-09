@@ -5,7 +5,15 @@ use warnings;
 
 # --- Configuration ---
 my $input_file = "/etc/systemd/logind.conf";   # Replace with the name of your file
-my $string_to_find = "HandleLidSwitch=suspend"; # Replace with the string you want to find
+my $string_to_find_1 = "HandleLidSwitch=suspend"; # Replace with the string you want to find
+my $string_to_find_2 = "HandleLidSwitch=poweroff"; # Replace with the string you want to find
+my $string_to_find_3 = "HandleLidSwitch=reboot"; # Replace with the string you want to find
+my $string_to_find_4 = "HandleLidSwitch=halt"; # Replace with the string you want to find
+my $string_to_find_5 = "HandleLidSwitch=kexec"; # Replace with the string you want to find
+my $string_to_find_6 = "HandleLidSwitch=hibernate"; # Replace with the string you want to find
+my $string_to_find_7 = "HandleLidSwitch=hybrid-sleep"; # Replace with the string you want to find
+my $string_to_find_8 = "HandleLidSwitch=suspend-then-hibernate"; # Replace with the string you want to find
+my $string_to_find_9 = "lock"; # Replace with the string you want to find
 my $string_to_replace = "HandleLidSwitch=ignore";          # Replace with the string you want to replace with
 
 # --- Processing ---
@@ -21,7 +29,7 @@ open (my $fh_output, '>', $temp_file)
 
 # Read the file line by line, perform the replacement, and write to the temporary file
 while (my $line = <$fh_input>) {
-    $line =~ s/\Q$string_to_find\E/$string_to_replace/g;
+    $line =~ s/\Q$string_to_find_1\E|\Q$string_to_find_2\E|\Q$string_to_find_3\E|\Q$string_to_find_4\E|\Q$string_to_find_5\E|\Q$string_to_find_6\E|\Q$string_to_find_7\E|\Q$string_to_find_8\E|\Q$string_to_find_9\E/$string_to_replace/g;
     print $fh_output $line;
 }
 
@@ -34,4 +42,31 @@ rename $temp_file, $input_file
     or die "Could not rename '$temp_file' to '$input_file': $!";
 
 print "The replacement has been successfully completed in '$input_file'.\n";
+print "This script will restart the 'systemd-logind.service' using sudo.\n";
+print "This might temporarily log you out or affect your graphical session.\n";
+print "Do you wish to proceed? (y/n): ";
+
+my $answer = <STDIN>;
+chomp $answer; # Remove the newline character
+
+if (lc $answer eq 'y') {
+    print "Proceeding with 'sudo systemctl restart systemd-logind.service'...\n";
+    # Execute the command
+    system("sudo systemctl restart systemd-logind.service");
+
+    # Check the exit status of the command
+    if ($? == 0) {
+        print "Command executed successfully.\n";
+    } else {
+        my $exit_status = $? >> 8; # Shift right by 8 bits to get the actual exit status
+        print "Command failed with exit status: $exit_status\n";
+        warn "Error: systemctl command failed.\n";
+    }
+} elsif (lc $answer eq 'n') {
+    print "Operation cancelled by user.\n";
+} else {
+    print "Invalid input. Please enter 'y' or 'n'. Operation cancelled.\n";
+}
+
+exit;
 #To make the changes take effect run sudo systemctl restart systemd-logind.service
