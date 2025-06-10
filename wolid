@@ -38,25 +38,17 @@ while (my $line = <$fh_input>) {
     # The \Q and \E ensure literal matching of $core_setting_prefix.
     if ($line =~ /^\s*#?\s*\Q$core_setting_prefix\E(.+)$/) {
         my $current_value = $1; # Captured value after HandleLidSwitch=
-        print "LINE: $line\n";
-        print "CORE: $core_setting_prefix\n";
-        print "Current_value = $current_value\n";
-        print "Desired_value = $desired_value";
         # Check if the current value is NOT the desired value.
         # We trim whitespace from the captured value before comparison.
         if (trim($current_value) ne $desired_value) {
             # If it's different, replace the line with our desired line.
-            print "Just before print1\n";
             print $fh_output "$new_desired_line\n";
-            exit 0;
         } else {
             # If it's already "HandleLidSwitch=suspend", keep the original line as is.
             # (Ensures leading comments/whitespace are preserved if they existed on a matching line)
             $line = $core_setting_prefix;
             $line .= $current_value;
-            print "\nJust before print2\n";
             print $fh_output "$line\n";
-            print "LINE $line\n";
         }
     } else {
         # If the line does NOT contain our core setting prefix,
