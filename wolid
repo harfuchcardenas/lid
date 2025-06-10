@@ -6,13 +6,15 @@ use warnings;
 # --- Configuration ---
 my $input_file = "/etc/systemd/logind.conf"; # The target file to modify
 
-# This is the "core string" that identifies the line we want to manage.
-# For example, if you want to find lines related to HandleLidSwitch.
-my $core_string_to_match_line = "HandleLidSwitch";
+# The core string that identifies the line we want to manage.
+# This part is used to find any line that *might* be a HandleLidSwitch setting.
+my $core_setting_prefix = "HandleLidSwitch=";
 
-# This is the EXACT new line that will replace any line containing the
-# $core_string_to_match_line. Ensure it ends with a newline character.
-my $new_desired_line = "HandleLidSwitch=suspend";
+# This is the EXACT desired value for the setting.
+my $desired_value = "suspend";
+
+# The complete line that will replace relevant lines.
+my $new_desired_line = "$core_setting_prefix$desired_value";
 
 # --- Processing ---
 
@@ -27,19 +29,39 @@ open (my $fh_output, '>', $temp_file)
 
 # Read the file line by line
 while (my $line = <$fh_input>) {
-    # Check if the current line contains our core string.
-    # The \Q and \E ensure that $core_string_to_match_line is treated as a literal string,
-    # so special regex characters within it (if any) won't cause issues.
-    if ($line =~ /\Q$core_string_to_match_line\E/) {
-        # If the line contains the core string,
-        # print our $new_desired_line to the output file.
-        # We append a newline because print doesn't add it by default,
-        # and we want each replacement to be on its own line.
-        print $fh_output "$new_desired_line\n";
+    # Remove any trailing newline character for consistent processing
+    chomp $line;
+
+    # Regex to find lines that start with optional whitespace, optional '#',
+    # optional more whitespace, then our core setting prefix.
+    # It captures whatever comes after the '='
+    # The \Q and \E ensure literal matching of $core_setting_prefix.
+    if ($line =~ /^\s*#?\s*\Q$core_setting_prefix\E(.+)$/) {
+        my $current_value = $1; # Captured value after HandleLidSwitch=
+        print "LINE: $line\n";
+        print "CORE: $core_setting_prefix\n";
+        print "Current_value = $current_value\n";
+        print "Desired_value = $desired_value";
+        # Check if the current value is NOT the desired value.
+        # We trim whitespace from the captured value before comparison.
+        if (trim($current_value) ne $desired_value) {
+            # If it's different, replace the line with our desired line.
+            print "Just before print1\n";
+            print $fh_output "$new_desired_line\n";
+            exit 0;
+        } else {
+            # If it's already "HandleLidSwitch=suspend", keep the original line as is.
+            # (Ensures leading comments/whitespace are preserved if they existed on a matching line)
+            $line = $core_setting_prefix;
+            $line .= $current_value;
+            print "\nJust before print2\n";
+            print $fh_output "$line\n";
+            print "LINE $line\n";
+        }
     } else {
-        # If the line does NOT contain the core string,
-        # print the original line as is to the output file.
-        print $fh_output $line;
+        # If the line does NOT contain our core setting prefix,
+        # print the original line as is, followed by a single newline.
+        print $fh_output "$line\n";
     }
 }
 
@@ -48,6 +70,8 @@ close $fh_input;
 close $fh_output;
 
 # Rename the temporary file to the original name (overwriting the original)
+# IMPORTANT: This step requires root privileges for /etc/systemd/logind.conf.
+# Ensure you run the Perl script itself with 'sudo perl your_script_name.pl'
 rename $temp_file, $input_file
     or die "Could not rename '$temp_file' to '$input_file': $!";
 
@@ -79,4 +103,11 @@ if (lc $answer eq 'y') {
 }
 
 exit;
-# To make the changes take effect run sudo systemctl restart systemd-logind.service
+
+# --- Helper Function ---
+# Function to trim leading/trailing whitespace from a string
+sub trim {
+    my $string = shift;
+    $string =~ s/^\s+|\s+$//g;
+    return $string;
+}
