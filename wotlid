@@ -4,17 +4,17 @@ use strict;
 use warnings;
 
 # --- Configuration ---
-my $input_file = "/etc/systemd/logind.conf";   # Replace with the name of your file
-my $string_to_find_1 = "HandleLidSwitch=suspend"; # Replace with the string you want to find
-my $string_to_find_2 = "HandleLidSwitch=poweroff"; # Replace with the string you want to find
-my $string_to_find_3 = "HandleLidSwitch=reboot"; # Replace with the string you want to find
-my $string_to_find_4 = "HandleLidSwitch=halt"; # Replace with the string you want to find
-my $string_to_find_5 = "HandleLidSwitch=kexec"; # Replace with the string you want to find
-my $string_to_find_6 = "HandleLidSwitch=hibernate"; # Replace with the string you want to find
-my $string_to_find_7 = "HandleLidSwitch=hybrid-sleep"; # Replace with the string you want to find
-my $string_to_find_8 = "HandleLidSwitch=suspend-then-hibernate"; # Replace with the string you want to find
-my $string_to_find_9 = "lock"; # Replace with the string you want to find
-my $string_to_replace = "HandleLidSwitch=ignore";          # Replace with the string you want to replace with
+my $input_file = "/etc/systemd/logind.conf"; # The target file to modify
+
+# The core string that identifies the line we want to manage.
+# This part is used to find any line that *might* be a HandleLidSwitch setting.
+my $core_setting_prefix = "HandleLidSwitch=";
+
+# This is the EXACT desired value for the setting.
+my $desired_value = "ignore";
+
+# The complete line that will replace relevant lines.
+my $new_desired_line = "$core_setting_prefix$desired_value";
 
 # --- Processing ---
 
@@ -27,10 +27,34 @@ my $temp_file = "$input_file.temp";
 open (my $fh_output, '>', $temp_file)
     or die "Could not open temporary file '$temp_file' for writing: $!";
 
-# Read the file line by line, perform the replacement, and write to the temporary file
+# Read the file line by line
 while (my $line = <$fh_input>) {
-    $line =~ s/\Q$string_to_find_1\E|\Q$string_to_find_2\E|\Q$string_to_find_3\E|\Q$string_to_find_4\E|\Q$string_to_find_5\E|\Q$string_to_find_6\E|\Q$string_to_find_7\E|\Q$string_to_find_8\E|\Q$string_to_find_9\E/$string_to_replace/g;
-    print $fh_output $line;
+    # Remove any trailing newline character for consistent processing
+    chomp $line;
+
+    # Regex to find lines that start with optional whitespace, optional '#',
+    # optional more whitespace, then our core setting prefix.
+    # It captures whatever comes after the '='
+    # The \Q and \E ensure literal matching of $core_setting_prefix.
+    if ($line =~ /^\s*#?\s*\Q$core_setting_prefix\E(.+)$/) {
+        my $current_value = $1; # Captured value after HandleLidSwitch=
+        # Check if the current value is NOT the desired value.
+        # We trim whitespace from the captured value before comparison.
+        if (trim($current_value) ne $desired_value) {
+            # If it's different, replace the line with our desired line.
+            print $fh_output "$new_desired_line\n";
+        } else {
+            # If it's already "HandleLidSwitch=suspend", keep the original line as is.
+            # (Ensures leading comments/whitespace are preserved if they existed on a matching line)
+            $line = $core_setting_prefix;
+            $line .= $current_value;
+            print $fh_output "$line\n";
+        }
+    } else {
+        # If the line does NOT contain our core setting prefix,
+        # print the original line as is, followed by a single newline.
+        print $fh_output "$line\n";
+    }
 }
 
 # Close both files
@@ -38,6 +62,8 @@ close $fh_input;
 close $fh_output;
 
 # Rename the temporary file to the original name (overwriting the original)
+# IMPORTANT: This step requires root privileges for /etc/systemd/logind.conf.
+# Ensure you run the Perl script itself with 'sudo perl your_script_name.pl'
 rename $temp_file, $input_file
     or die "Could not rename '$temp_file' to '$input_file': $!";
 
@@ -69,4 +95,12 @@ if (lc $answer eq 'y') {
 }
 
 exit;
-#To make the changes take effect run sudo systemctl restart systemd-logind.service
+
+# --- Helper Function ---
+# Function to trim leading/trailing whitespace from a string
+sub trim {
+    my $string = shift;
+    $string =~ s/^\s+|\s+$//g;
+    return $string;
+}
+
